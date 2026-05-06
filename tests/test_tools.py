@@ -279,6 +279,12 @@ class TestCC:
         result = pk.calcule_cc(df, by="lig")
         assert result.equals(expected)
 
+    def test_by_is_none(self):
+        df = pl.DataFrame({"lig": ["A", "A", "A"], "pkd": [1, 8, 20], "pkf": [10, 15, 25]})
+        expected = pl.DataFrame({"lig": ["A", "A"], "pkd": [1, 20], "pkf": [15, 25]})
+        result = pk.calcule_cc(df, pk_lbls=("pkd", "pkf"))
+        assert result.equals(expected)
+
 
 class TestSelfIntersect:
     """Test cases for the self_intersect function."""

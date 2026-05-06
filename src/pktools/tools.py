@@ -105,7 +105,9 @@ def zones_homogenes(
 
 
 def calcule_cc(
-    df: pl.DataFrame, by: str | list[str], pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f")
+    df: pl.DataFrame,
+    by: str | list[str] | None = None,
+    pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f"),
 ) -> pl.DataFrame:
     """Calcule les composantes connexes d'intervalles chevauchants.
 
@@ -118,7 +120,7 @@ def calcule_cc(
         DataFrame contenant les intervalles à fusionner.
     by :
         Colonne(s) de regroupement : la fusion n'est effectuée qu'au sein
-        de chaque groupe.
+        de chaque groupe. Si None, les colonnes de df sauf pk_lbls sont retenues.
     pk_lbls :
         Noms des colonnes de début et fin d'intervalle (dans cet ordre).
 
@@ -138,7 +140,8 @@ def calcule_cc(
     start, end = pk_lbls
     if isinstance(by, str):
         by = [by]
-
+    if by is None:
+        by = [col for col in df.columns if col not in pk_lbls]
     return (
         df.sort(by + [start])
         .with_columns([pl.col(end).cum_max().over(by).alias("running_max_end")])
