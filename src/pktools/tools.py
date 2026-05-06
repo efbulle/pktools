@@ -1,12 +1,14 @@
 """Module de manipulation des tronçons."""
 
+from collections.abc import Sequence
+
 import polars as pl
 import polars.selectors as cs
 
 
 def zones_homogenes(
-    df_list: list[pl.DataFrame],
-    on: str | list[str],
+    df_list: Sequence[pl.DataFrame],
+    on: str | Sequence[str],
     pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f"),
     id_prefix: str = "_id",
     df_suffix: str = "_df",
@@ -50,21 +52,20 @@ def zones_homogenes(
     # --- Phase 1: build the PK grid (eager, needs shift().over()) ---
     all_pks = []
     for df in df_list:
-        all_pks.append(
-            df.select(on + list(pk_lbls)).unpivot(index=on, value_name="pk").drop("variable")
-        )
+        all_pks.append(df.select(*on, *pk_lbls).unpivot(index=on, value_name="pk").drop("variable"))
 
     loc = (
         pl.concat(all_pks)
         .unique()
-        .sort(on + ["pk"])
+        .sort(*on, "pk")
         .with_columns(pl.col("pk").shift(-1).over(on).alias(pkf))
         .filter(pl.col(pkf).is_not_null())
         .rename({"pk": pkd})
     )
 
     # --- Detect collisions across all dataframes ---
-    all_payload_cols = [c for df in df_list for c in df.columns if c not in on + list(pk_lbls)]
+    exclude_cols = *on, *pk_lbls
+    all_payload_cols = [c for df in df_list for c in df.columns if c not in exclude_cols]
     collision_cols = {c for c, n in Counter(all_payload_cols).items() if n > 1}
 
     # --- Phase 2: lazy joins per df ---
@@ -79,21 +80,21 @@ def zones_homogenes(
         df_lazy = df_with_idx.lazy().rename({pkd: pkd_ref, pkf: pkf_ref})
 
         zone_match = (
-            loc_lazy.join(df_lazy.select(on + [row_idx, pkd_ref, pkf_ref]), on=on, how="left")
+            loc_lazy.join(df_lazy.select(*on, row_idx, pkd_ref, pkf_ref), on=on, how="left")
             .filter(
                 pl.col(pkd_ref).is_null()
                 | ((pl.col(pkd_ref) <= pl.col(pkd)) & (pl.col(pkf) <= pl.col(pkf_ref)))
             )
-            .select(on + [pkd, pkf, row_idx])
+            .select(*on, pkd, pkf, row_idx)
         )
         payload_cols = [
             pl.col(c).alias(f"{c}{df_suffix}{i}") if c in collision_cols else pl.col(c)
             for c in df.columns
-            if c not in on + list(pk_lbls)
+            if c not in exclude_cols
         ]
         payload = df_with_idx.lazy().select(row_idx, *payload_cols)
 
-        final_lazy = final_lazy.join(zone_match, on=on + [pkd, pkf], how="left").join(
+        final_lazy = final_lazy.join(zone_match, on=[*on, pkd, pkf], how="left").join(
             payload, on=row_idx, how="left"
         )
 
@@ -106,7 +107,7 @@ def zones_homogenes(
 
 def calcule_cc(
     df: pl.DataFrame,
-    by: str | list[str] | None = None,
+    by: str | Sequence[str] | None = None,
     pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f"),
 ) -> pl.DataFrame:
     """Calcule les composantes connexes d'intervalles chevauchants.
@@ -143,7 +144,7 @@ def calcule_cc(
     if by is None:
         by = [col for col in df.columns if col not in pk_lbls]
     return (
-        df.sort(by + [start])
+        df.sort(*by, start)
         .with_columns([pl.col(end).cum_max().over(by).alias("running_max_end")])
         .with_columns(
             (
@@ -153,7 +154,7 @@ def calcule_cc(
             ).alias("new_group")
         )
         .with_columns(pl.cum_sum("new_group").over(by).alias("group_id"))
-        .group_by(by + ["group_id"], maintain_order=True)
+        .group_by(*by, "group_id", maintain_order=True)
         .agg(
             [
                 pl.col(start).min().alias(start),
@@ -165,7 +166,7 @@ def calcule_cc(
 
 
 def self_intersect(
-    df: pl.DataFrame, on: str | list[str], pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f")
+    df: pl.DataFrame, on: str | Sequence[str], pk_lbls: tuple[str, str] = ("pk_int_d", "pk_int_f")
 ) -> pl.DataFrame:
     """Détecte les paires d'intervalles qui se chevauchent au sein d'un même groupe.
 
