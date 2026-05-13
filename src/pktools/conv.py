@@ -57,7 +57,7 @@ def ext_to_int(pk_ext: pl.Expr) -> pl.Expr:
     comp = groups.struct.field("comp").replace_strict(COMP_MAP)
     op = groups.struct.field("op").replace_strict(OP_MAP)
     add2 = groups.struct.field("add2").cast(pl.Int64)
-    return add1 * 100000 + comp * 10000 + op * add2
+    return (add1 * 100000 + comp * 10000 + op * add2).name.keep()
 
 
 def m_to_int(pk_m: pl.Expr) -> pl.Expr:
@@ -77,3 +77,9 @@ def ext_to_m(pk_ext: pl.Expr) -> pl.Expr:
 def m_to_ext(pk_m: pl.Expr) -> pl.Expr:
     """Convertir une expression de pk métriques en pk externes."""
     return int_to_ext(m_to_int(pk_m))
+
+
+def rk_dm_to_ext(rk: pl.Expr, dm: pl.Expr) -> pl.Expr:
+    """Convertir des pk internes (base + ajout) en pk externes."""
+    op = pl.when(dm >= 0).then(pl.lit("+")).otherwise(pl.lit("-"))
+    return pl.format("{}{}{}", rk, op, dm.abs().cast(pl.Int32).cast(pl.String).str.zfill(3))
