@@ -80,6 +80,6 @@ def m_to_ext(pk_m: pl.Expr) -> pl.Expr:
 
 
 def rk_dm_to_ext(rk: pl.Expr, dm: pl.Expr) -> pl.Expr:
-    """Convertir des pk internes (base + ajout) en pk externes."""
+    """Convertir des pk donnés par rk et dm en pk externes."""
     op = pl.when(dm >= 0).then(pl.lit("+")).otherwise(pl.lit("-"))
     return pl.format("{}{}{}", rk, op, dm.abs().cast(pl.Int32).cast(pl.String).str.zfill(3))
