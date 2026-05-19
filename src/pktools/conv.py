@@ -83,3 +83,8 @@ def rk_dm_to_ext(rk: pl.Expr, dm: pl.Expr) -> pl.Expr:
     """Convertir des pk donnés par rk et dm en pk externes."""
     op = pl.when(dm >= 0).then(pl.lit("+")).otherwise(pl.lit("-"))
     return pl.format("{}{}{}", rk, op, dm.abs().cast(pl.Int32).cast(pl.String).str.zfill(3))
+
+
+def rk_dm_to_int(rk: pl.Expr, dm: pl.Expr) -> pl.Expr:
+    """Convertir des pk donnés par rk et dm en pk intérieurs."""
+    return ext_to_int(rk_dm_to_ext(rk, dm))

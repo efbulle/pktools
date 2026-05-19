@@ -81,3 +81,18 @@ def test_rk_dm_to_ext():
     )
     df2 = df.with_columns(pk.rk_dm_to_ext(pl.col("rk"), pl.col("dm")).alias("pk_ext2"))
     assert df2["pk_ext2"].equals(df2["pk_ext"])
+
+
+def test_rk_dm_to_int():
+    df = pl.DataFrame(
+        [
+            ("123", 62.0, 12300062),
+            ("0", -6, -6),
+            ("12", 1054, 1201054),
+            ("12B", 1054, 1211054),
+        ],
+        orient="row",
+        schema=["rk", "dm", "pk_int"],
+    )
+    df2 = df.with_columns(pk.rk_dm_to_int(pl.col("rk"), pl.col("dm")).alias("pk_int2"))
+    assert df2["pk_int2"].equals(df2["pk_int"])
