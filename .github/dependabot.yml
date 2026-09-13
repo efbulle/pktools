@@ -4,29 +4,39 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "chore(deps)"
     labels:
       - "dependencies"
+      - "python"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Hooks pre-commit (.pre-commit-config.yaml)
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "chore(pre-commit)"
     labels:
       - "dependencies"
+      - "pre-commit"
 
   # Actions utilisées dans les workflows GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "chore(ci)"
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
