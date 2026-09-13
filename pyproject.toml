@@ -1,0 +1,56 @@
+[project]
+name = "pktools"
+version = "0.11.0"
+description = "Modules de manipulation de pk et de tronçons"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENCE"]
+authors = [
+    { name = "efbulle", email = "emmanuel.favrebulle@gmail.com" }
+]
+requires-python = ">=3.12.3"
+keywords = ["railway", "kilometric-point", "pk", "polars", "sncf", "ferroviaire"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "polars>=1.38.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/efbulle/pktools"
+Repository = "https://github.com/efbulle/pktools"
+Issues = "https://github.com/efbulle/pktools/issues"
+Changelog = "https://github.com/efbulle/pktools/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.16.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["pktools"]
+
+[tool.ruff]
+line-length = 100
