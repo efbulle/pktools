@@ -86,6 +86,79 @@ d'intervalles (tronçons) définis par des colonnes de PK de début/fin :
 Voir les docstrings de chaque fonction (format NumPy) pour le détail des
 paramètres et des exemples.
 
+#### `zones_homogenes`
+
+`zones_homogenes` prend en entrée plusieurs `DataFrame` décrivant chacun un
+découpage en tronçons (bornes de PK de début/fin) pour un même ensemble de
+groupes (ex: une ligne ferroviaire). Elle recalcule un découpage commun en
+« zones homogènes » : chaque zone de sortie est un tronçon élémentaire sur
+lequel aucune des tables d'entrée ne change de valeur, avec les colonnes de
+chaque table rattachées (suffixées en cas de collision de noms).
+
+```python
+import polars as pl
+import pktools as pk
+
+vitesse = pl.DataFrame(
+    {
+        "lig": [1, 1],
+        "pk_int_d": [0, 500],
+        "pk_int_f": [500, 1000],
+        "vmax": [160, 220],
+    }
+)
+travaux = pl.DataFrame(
+    {
+        "lig": [1],
+        "pk_int_d": [300],
+        "pk_int_f": [700],
+        "ralenti": [True],
+    }
+)
+
+zones = pk.zones_homogenes([vitesse, travaux], on="lig")
+print(zones)
+```
+
+```text
+shape: (3, 5)
+┌─────┬──────────┬──────────┬──────┬─────────┐
+│ lig ┆ pk_int_d ┆ pk_int_f ┆ vmax ┆ ralenti │
+│ --- ┆ ---      ┆ ---      ┆ ---  ┆ ---     │
+│ i64 ┆ i64      ┆ i64      ┆ i64  ┆ bool    │
+╞═════╪══════════╪══════════╪══════╪═════════╡
+│ 1   ┆ 0        ┆ 300      ┆ 160  ┆ null    │
+│ 1   ┆ 300      ┆ 500      ┆ 160  ┆ true    │
+│ 1   ┆ 500      ┆ 700      ┆ 220  ┆ true    │
+│ 1   ┆ 700      ┆ 1000     ┆ 220  ┆ null    │
+└─────┴──────────┴──────────┴──────┴─────────┘
+```
+
+**Cas d'usage et cas limites :**
+
+- **Groupes absents d'une table** : si un groupe (valeur de `on`) n'existe
+  que dans certaines tables, les zones correspondantes sont tout de même
+  produites ; les colonnes issues des tables qui ne couvrent pas ce groupe
+  valent `null`.
+- **Intervalles chevauchants** : si deux intervalles d'une même table (ou
+  de tables différentes) se chevauchent, la zone commune est rattachée aux
+  deux intervalles sources ; une zone peut donc apparaître plusieurs fois
+  dans le résultat si elle est couverte par plusieurs lignes d'une même table.
+- **Lignes dupliquées** : des lignes strictement identiques (mêmes bornes,
+  dans une ou plusieurs tables) produisent un produit croisé — chaque
+  combinaison de lignes sources correspondantes donne lieu à une ligne de
+  sortie distincte.
+- **Valeurs manquantes** : une valeur nulle dans une colonne de charge utile
+  (ni clé de regroupement, ni borne de PK) est simplement propagée. Une
+  valeur nulle dans une colonne de regroupement (`on`) exclut la ligne
+  correspondante du résultat, car elle ne peut être rattachée à aucun groupe.
+- **Collisions de noms de colonnes** : si plusieurs tables partagent un nom
+  de colonne (hors `on` et `pk_lbls`), les colonnes en conflit sont
+  suffixées avec `df_suffix` (ex: `vmax_df0`, `vmax_df1`).
+
+Voir les tests de `tests/test_tools.py::TestZHEdgeCases` pour des exemples
+exécutables de ces cas limites.
+
 ## Dépendances
 
 - **polars** (≥1.38.1) : Framework de manipulation de données haute performance

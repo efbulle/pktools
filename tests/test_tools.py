@@ -206,6 +206,165 @@ class TestZH:
         assert res.columns == ["lig", "pkmd", "pkmf", "a_df0", "a_df1", "b"]
 
 
+class TestZHEdgeCases:
+    """Cas extrêmes pour zones_homogenes : chevauchements, doublons et valeurs manquantes."""
+
+    def test_overlap_within_single_df(self):
+        """Deux intervalles qui se chevauchent dans un même DataFrame.
+
+        La zone de chevauchement est couverte par les deux intervalles source :
+        elle apparaît donc deux fois dans le résultat (une fois par intervalle
+        source qui la couvre).
+        """
+        df = pl.DataFrame([(1, 0, 10), (1, 5, 20)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        res = pk.zones_homogenes([df], on="lig", pk_lbls=("pkmd", "pkmf"))
+        expected = pl.DataFrame(
+            [(1, 0, 5), (1, 5, 10), (1, 5, 10), (1, 10, 20)],
+            orient="row",
+            schema=["lig", "pkmd", "pkmf"],
+        )
+        assert res.sort("lig", "pkmd", "pkmf").equals(expected.sort("lig", "pkmd", "pkmf"))
+
+    def test_overlap_across_two_dfs(self):
+        """Chevauchement entre intervalles provenant de deux DataFrames distincts.
+
+        La zone commune aux deux intervalles chevauchants est renseignée par
+        les deux tables (ni id1 ni id2 n'est nul sur cette zone).
+        """
+        df1 = pl.DataFrame([(1, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        df2 = pl.DataFrame([(1, 5, 15)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        res = pk.zones_homogenes([df1, df2], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("pkmd").select("lig", "pkmd", "pkmf").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 5},
+            {"lig": 1, "pkmd": 5, "pkmf": 10},
+            {"lig": 1, "pkmd": 10, "pkmf": 15},
+        ]
+
+    def test_duplicate_rows_within_single_df(self):
+        """Deux lignes strictement identiques (mêmes bornes) dans un même DataFrame.
+
+        Chaque ligne source produit sa propre ligne de sortie : le résultat
+        contient donc deux lignes identiques (une par doublon).
+        """
+        df = pl.DataFrame([(1, 0, 10), (1, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        res = pk.zones_homogenes([df], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.height == 2
+        assert res.select("lig", "pkmd", "pkmf").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 10},
+            {"lig": 1, "pkmd": 0, "pkmf": 10},
+        ]
+
+    def test_duplicate_rows_across_multiple_dfs(self):
+        """Un même intervalle dupliqué deux fois dans une table, croisé avec
+        une autre table qui ne le contient qu'une fois.
+
+        Le produit croisé des lignes correspondantes est bien matérialisé :
+        une ligne de sortie par combinaison source/doublon.
+        """
+        df1 = pl.DataFrame({"lig": [1, 1], "pkmd": [0, 0], "pkmf": [10, 10], "v1": [10, 20]})
+        df2 = pl.DataFrame({"lig": [1], "pkmd": [0], "pkmf": [10], "v2": ["x"]})
+        res = pk.zones_homogenes([df1, df2], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("v1").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 10, "v1": 10, "v2": "x"},
+            {"lig": 1, "pkmd": 0, "pkmf": 10, "v1": 20, "v2": "x"},
+        ]
+
+    def test_duplicate_whole_dataframe(self):
+        """Un même DataFrame fourni deux fois dans ``df_list``.
+
+        Les zones ne sont pas dupliquées car chaque intervalle source
+        correspond exactement à une unique zone (pas de collision multiple).
+        """
+        df = pl.DataFrame([(1, 0, 10), (1, 10, 20)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        res = pk.zones_homogenes([df, df.clone()], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert (
+            res.sort("pkmd")
+            .select("lig", "pkmd", "pkmf")
+            .equals(df.sort("pkmd").select("lig", "pkmd", "pkmf"))
+        )
+
+    def test_group_missing_from_one_table(self):
+        """Groupe (valeur de ``on``) présent dans une table mais absent d'une autre.
+
+        Les zones issues du groupe non partagé sont tout de même incluses,
+        puisqu'elles sont couvertes par au moins un DataFrame.
+        """
+        df1 = pl.DataFrame([(1, 0, 10), (2, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        df2 = pl.DataFrame([(1, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        res = pk.zones_homogenes([df1, df2], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("lig").select("lig", "pkmd", "pkmf").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 10},
+            {"lig": 2, "pkmd": 0, "pkmf": 10},
+        ]
+
+    def test_group_missing_from_all_but_one_table(self):
+        """Groupe présent dans une seule table parmi trois.
+
+        Les colonnes d'identifiant des tables qui ne couvrent pas le groupe
+        valent null pour les zones correspondantes.
+        """
+        df1 = pl.DataFrame([(1, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"]).with_columns(
+            id1=pl.row_index()
+        )
+        df2 = pl.DataFrame([(2, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"]).with_columns(
+            id2=pl.row_index()
+        )
+        df3 = pl.DataFrame([(3, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"]).with_columns(
+            id3=pl.row_index()
+        )
+        res = pk.zones_homogenes([df1, df2, df3], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("lig").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 10, "id1": 0, "id2": None, "id3": None},
+            {"lig": 2, "pkmd": 0, "pkmf": 10, "id1": None, "id2": 0, "id3": None},
+            {"lig": 3, "pkmd": 0, "pkmf": 10, "id1": None, "id2": None, "id3": 0},
+        ]
+
+    def test_null_value_in_grouping_column(self):
+        """Valeur nulle dans la colonne de regroupement ``on``.
+
+        La ligne dont la valeur de ``on`` est nulle n'est rattachée à aucun
+        groupe valide et n'apparaît donc pas dans le résultat.
+        """
+        df = pl.DataFrame({"lig": [1, None], "pkmd": [0, 0], "pkmf": [10, 10]})
+        res = pk.zones_homogenes([df], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.to_dicts() == [{"lig": 1, "pkmd": 0, "pkmf": 10}]
+
+    def test_null_value_in_payload_column(self):
+        """Valeur nulle dans une colonne qui n'est ni clé de regroupement ni borne de PK.
+
+        La valeur nulle est simplement propagée dans le résultat.
+        """
+        df = pl.DataFrame({"lig": [1, 1], "pkmd": [0, 10], "pkmf": [10, 20], "cat": [None, "b"]})
+        res = pk.zones_homogenes([df], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("pkmd").to_dicts() == [
+            {"lig": 1, "pkmd": 0, "pkmf": 10, "cat": None},
+            {"lig": 1, "pkmd": 10, "pkmf": 20, "cat": "b"},
+        ]
+
+    def test_multiple_on_columns(self):
+        """Regroupement sur plusieurs colonnes simultanément."""
+        df1 = pl.DataFrame({"lig": [1, 1], "voie": ["V1", "V2"], "pkmd": [0, 0], "pkmf": [10, 10]})
+        df2 = pl.DataFrame({"lig": [1], "voie": ["V1"], "pkmd": [5], "pkmf": [15]})
+        res = pk.zones_homogenes([df1, df2], on=["lig", "voie"], pk_lbls=("pkmd", "pkmf"))
+        assert res.sort("voie", "pkmd").select("lig", "voie", "pkmd", "pkmf").to_dicts() == [
+            {"lig": 1, "voie": "V1", "pkmd": 0, "pkmf": 5},
+            {"lig": 1, "voie": "V1", "pkmd": 5, "pkmf": 10},
+            {"lig": 1, "voie": "V1", "pkmd": 10, "pkmf": 15},
+            {"lig": 1, "voie": "V2", "pkmd": 0, "pkmf": 10},
+        ]
+
+    def test_empty_df_list_mix(self):
+        """Une table vide (0 ligne) mêlée à une table non vide.
+
+        Aucune zone n'est générée à partir de la table vide, mais le résultat
+        reste correct pour les autres tables.
+        """
+        df1 = pl.DataFrame([(1, 0, 10)], orient="row", schema=["lig", "pkmd", "pkmf"])
+        df2 = pl.DataFrame(schema={"lig": pl.Int64, "pkmd": pl.Int64, "pkmf": pl.Int64})
+        res = pk.zones_homogenes([df1, df2], on="lig", pk_lbls=("pkmd", "pkmf"))
+        assert res.select("lig", "pkmd", "pkmf").to_dicts() == [{"lig": 1, "pkmd": 0, "pkmf": 10}]
+
+
 class TestCC:
     def test_overlapping_intervals(self):
         """Test merging of overlapping intervals."""
