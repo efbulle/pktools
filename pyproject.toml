@@ -24,7 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "polars>=1.44.2",
+    "polars>=2.0.0",
 ]
 
 [project.urls]
@@ -34,15 +34,15 @@ Issues = "https://github.com/efbulle/pktools/issues"
 Changelog = "https://github.com/efbulle/pktools/blob/main/CHANGELOG.md"
 
 [build-system]
-requires = ["uv_build>=0.12.21,<0.13"]
+requires = ["uv_build>=0.13.4,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.1.0",
+    "pre-commit>=4.7.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
-    "ruff>=0.16.9",
+    "ruff>=0.17.1",
 ]
 
 [tool.pytest.ini_options]
