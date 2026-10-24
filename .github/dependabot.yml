@@ -1,40 +1,46 @@
 version: 2
 updates:
-  # Dépendances Python gérées par uv (pyproject.toml / uv.lock)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(deps)"
+
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "monthly"
-    commit-message:
-      prefix: "chore(deps)"
-    open-pull-requests-limit: 10
+      interval: "weekly"
     groups:
-      python-dependencies:
+      all-python-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
+      python-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(deps)"
 
   # Hooks pre-commit (.pre-commit-config.yaml)
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
+    groups:
+      all-pre-commit-hooks:
+        applies-to: version-updates
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore(pre-commit)"
-    open-pull-requests-limit: 10
-    groups:
-      pre-commit:
-        patterns:
-          - "*"
-
-  # Actions utilisées dans les workflows GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    commit-message:
-      prefix: "chore(ci)"
-    open-pull-requests-limit: 10
-    groups:
-      github-actions:
-        patterns:
-          - "*"
