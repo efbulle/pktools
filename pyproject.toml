@@ -24,7 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "polars>=1.44.2",
+    "polars>=2.0.0",
 ]
 
 [project.urls]
@@ -39,10 +39,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.1.0",
+    "pre-commit>=4.7.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
-    "ruff>=0.16.9",
+    "ruff>=0.17.1",
 ]
 
 [tool.pytest.ini_options]
