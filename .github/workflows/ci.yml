@@ -33,6 +33,9 @@ jobs:
       - name: Install project (dev deps)
         run: uv sync --locked
 
+      - name: Type check
+        run: uv run pyright
+
       - name: ruff check
         run: uv run ruff check --output-format=github .
 
