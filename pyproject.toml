@@ -27,6 +27,9 @@ dependencies = [
     "polars>=2.1.0",
 ]
 
+[project.optional-dependencies]
+pandas = ["pandas>=2.2"]
+
 [project.urls]
 Homepage = "https://github.com/efbulle/pktools"
 Repository = "https://github.com/efbulle/pktools"
@@ -39,6 +42,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pandas>=2.2",
     "pre-commit>=4.7.0",
     "pyright>=1.1.408",
     "pytest>=9.2.0",

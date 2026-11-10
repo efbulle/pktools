@@ -20,6 +20,21 @@ Modules de manipulation de pk (points kilométriques) et de tronçons.
 pip install pktools
 ```
 
+Cette installation conserve Polars comme dépendance obligatoire pour les
+utilisateurs existants. Pour ajouter pandas : `pip install "pktools[pandas]"`.
+Pour un environnement **pandas seul**, installer ses dépendances normalement,
+puis pktools sans résolution de dépendances :
+
+```bash
+pip install "pandas>=2.2"
+pip install --no-deps pktools
+```
+
+Cette dernière installation laisse volontairement la dépendance déclarée à
+Polars non satisfaite : `pip check` le signalera et les fonctions Polars de
+pktools ne seront pas utilisables tant que Polars n'est pas installé. Un extra
+pip ne peut pas supprimer une dépendance obligatoire.
+
 ## Utilisation
 
 ### Conversions de points kilométriques
@@ -69,6 +84,68 @@ print(df)
 - Les conversions sont vectorisées pour des colonnes `polars.Expr`.
 - Pour les chaînes de PK externes invalides, l'extraction échoue et produit des valeurs nulles.
 - La conversion vers PK métrique est une représentation simplifiée: certaines informations de repère/complement ne sont pas conservées.
+
+### Conversions pandas strictes
+
+L'interface `pktools.pandas` ne requiert ni n'importe Polars. Elle expose
+`ext_to_int`, `ext_to_m`, `int_to_ext`, `int_to_m`, `m_to_int`, `m_to_ext`,
+`rk_dm_to_ext` et `rk_dm_to_int`. Elle ne porte pas les fonctions de tronçons.
+
+```python
+import pandas as pd
+from pktools import pandas as pk
+
+pk_ext = pd.Series(["4+514", "412B+795", None], index=["a", "b", "c"], name="pk")
+pk_m = pk.ext_to_m(pk_ext)  # 4514, 413795, <NA> ; même index et nom
+```
+
+- Chaque argument est une `pandas.Series` ; pour les fonctions à deux
+  arguments, les index doivent être identiques, y compris leur ordre et leurs
+  doublons. Les entrées sont validées indépendamment, même si l'autre valeur
+  de la ligne est manquante.
+- Les PK externes sont des chaînes entières, sans espaces ni sous-chaîne
+  supplémentaire : 1 à 3 chiffres ASCII ou une lettre `D` à `H`, suivis
+  éventuellement de `B`, `T` ou `Q`, puis de `+` ou `-` et de 3 ou 4 chiffres.
+  Les lettres RER C correspondent à `D=0`, `E=1`, `F=2`, `G=3`, `H=4`.
+  Les repères `rk` sont des chaînes suivant la même règle sans signe ni distance.
+- Les PK numériques et distances `dm` sont des entiers ou flottants
+  représentant exactement un entier (dans la limite de ±2⁵³ pour les
+  flottants). Les booléens, chaînes numériques, fractions et infinis sont
+  refusés. `dm` doit être compris entre -9999 et 9999. Les valeurs sont
+  limitées à l'intervalle Int64 sûr ; pour `m_to_int`/`m_to_ext`, le maximum
+  positif est 92 233 720 368 547 999 afin d'éviter un dépassement. La conversion
+  d'un PK interne en externe exige en outre un chiffre de complément de 0 à 3.
+- `None`, `NaN` et `pd.NA` sont propagés comme `pd.NA` ; pour deux arguments,
+  une valeur manquante dans l'un des deux rend la sortie manquante. Les sorties
+  numériques sont de type pandas nullable `Int64`, les sorties externes de
+  type `string`. L'index et le nom de la première série sont conservés.
+- Toute valeur non manquante invalide provoque une `ValueError` indiquant le
+  nombre total d'erreurs et jusqu'à dix triplets (position, index, valeur).
+  Les non-`Series` provoquent une `TypeError`.
+- Les règles et signes reproduisent les calculs Polars, y compris leurs cas
+  particuliers : par exemple `int_to_ext(-1000)` produit `0+1000`. Le passage
+  en mètres fusionne certaines représentations (compléments et dépassements
+  kilométriques). La conversion externe → interne perd aussi la lettre RER C
+  et les zéros de tête ; les conversions inverses ne reconstituent pas
+  nécessairement la représentation d'origine.
+
+Les constantes de syntaxe et les tables métier sont partagées avec Polars ;
+les calculs sont distincts et vectorisés dans chaque moteur, avec une
+validation des types des valeurs objet côté pandas. Les tests comparent les
+résultats sur les entrées valides communes.
+
+#### PyScript / Pyodide
+
+Le wheel pktools est en Python pur, mais pandas et ses dépendances numériques
+nécessitent des distributions adaptées à la version de Pyodide utilisée.
+La [liste des paquets Pyodide](https://pyodide.org/en/stable/usage/packages-in-pyodide.html)
+indique les versions fournies ; la documentation de
+[micropip](https://pyodide.org/en/stable/usage/loading-packages.html) décrit
+`deps=False` pour ne pas résoudre les dépendances du wheel. Il faudra fournir
+une version compatible de pandas séparément et tenir compte de `requires-python`
+(`>=3.12.3`). L'installation et l'exécution dans un navigateur n'ont pas été
+vérifiées ici : cette interface ne constitue pas une garantie de compatibilité
+PyScript/Pyodide.
 
 ### Manipulation de tronçons
 
@@ -161,7 +238,8 @@ exécutables de ces cas limites.
 
 ## Dépendances
 
-- **polars** (≥1.38.1) : Framework de manipulation de données haute performance
+- **polars** (≥2.1.0) : dépendance par défaut et moteur des fonctions existantes.
+- **pandas** (≥2.2) : dépendance optionnelle de l'interface pandas.
 
 ## Développement
 

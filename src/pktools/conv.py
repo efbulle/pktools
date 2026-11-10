@@ -2,11 +2,7 @@
 
 import polars as pl
 
-REGEX_PK_EXT = r"(?P<add1>\d{1,3}|[DEFGH])(?P<comp>[BTQ]?)(?P<op>[+-])(?P<add2>\d{3,4})"
-# pk particuliers pour lignes 983000 et 984000 (Invalides à Austerlitz)
-RER_C = {"D": "0", "E": "1", "F": "2", "G": "3", "H": "4"}
-COMP_MAP = {"": 0, "B": 1, "T": 2, "Q": 3}
-OP_MAP = {"+": 1, "-": -1}
+from ._rules import COMP_MAP, OP_MAP, REGEX_PK_EXT, RER_C
 
 
 def _int_to_m_and_ext(pk: pl.Expr) -> tuple[pl.Expr, pl.Expr]:
