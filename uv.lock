@@ -320,18 +320,19 @@ wheels = [
 name = "pktools"
 version = "0.11.0"
 source = { editable = "." }
-dependencies = [
-    { name = "polars" },
-]
 
 [package.optional-dependencies]
 pandas = [
     { name = "pandas" },
 ]
+polars = [
+    { name = "polars" },
+]
 
 [package.dev-dependencies]
 dev = [
     { name = "pandas" },
+    { name = "polars" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -342,13 +343,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2" },
-    { name = "polars", specifier = ">=2.1.0" },
+    { name = "polars", marker = "extra == 'polars'", specifier = ">=2.1.0" },
 ]
-provides-extras = ["pandas"]
+provides-extras = ["polars", "pandas"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pandas", specifier = ">=2.2" },
+    { name = "polars", specifier = ">=2.1.0" },
     { name = "pre-commit", specifier = ">=4.7.0" },
     { name = "pyright", specifier = ">=1.1.408" },
     { name = "pytest", specifier = ">=9.2.0" },

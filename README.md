@@ -17,23 +17,25 @@ Modules de manipulation de pk (points kilométriques) et de tronçons.
 ### Installer via pip
 
 ```bash
-pip install pktools
+pip install "pktools[polars]"
 ```
 
-Cette installation conserve Polars comme dépendance obligatoire pour les
-utilisateurs existants. Pour ajouter pandas : `pip install "pktools[pandas]"`.
-Pour un environnement **pandas seul**, installer ses dépendances normalement,
-puis pktools sans résolution de dépendances :
+Polars et pandas sont des dépendances optionnelles et indépendantes. Les
+conversions pandas seules s'installent avec :
 
 ```bash
-pip install "pandas>=2.2"
-pip install --no-deps pktools
+pip install "pktools[pandas]"
 ```
 
-Cette dernière installation laisse volontairement la dépendance déclarée à
-Polars non satisfaite : `pip check` le signalera et les fonctions Polars de
-pktools ne seront pas utilisables tant que Polars n'est pas installé. Un extra
-pip ne peut pas supprimer une dépendance obligatoire.
+Pour utiliser les deux backends : `pip install "pktools[polars,pandas]"`.
+`pip install pktools` installe le paquet sans aucun backend. Il reste
+importable, mais chaque backend doit être installé avant d'utiliser ses
+fonctions ; les fonctions Polars donnent un message d'erreur indiquant
+`pktools[polars]` si Polars manque.
+
+**Migration depuis les versions précédentes :** Polars était auparavant
+installé par défaut. Pour retrouver les dépendances et conversions habituelles,
+mettez à jour l'installation avec `pip install "pktools[polars]"`.
 
 ## Utilisation
 
@@ -87,7 +89,8 @@ print(df)
 
 ### Conversions pandas strictes
 
-L'interface `pktools.pandas` ne requiert ni n'importe Polars. Elle expose
+L'interface `pktools.pandas` ne requiert ni n'importe Polars. Installez
+`pktools[pandas]`. Elle expose
 `ext_to_int`, `ext_to_m`, `int_to_ext`, `int_to_m`, `m_to_int`, `m_to_ext`,
 `rk_dm_to_ext` et `rk_dm_to_int`. Elle ne porte pas les fonctions de tronçons.
 
@@ -136,16 +139,19 @@ résultats sur les entrées valides communes.
 
 #### PyScript / Pyodide
 
-Le wheel pktools est en Python pur, mais pandas et ses dépendances numériques
-nécessitent des distributions adaptées à la version de Pyodide utilisée.
-La [liste des paquets Pyodide](https://pyodide.org/en/stable/usage/packages-in-pyodide.html)
-indique les versions fournies ; la documentation de
-[micropip](https://pyodide.org/en/stable/usage/loading-packages.html) décrit
-`deps=False` pour ne pas résoudre les dépendances du wheel. Il faudra fournir
-une version compatible de pandas séparément et tenir compte de `requires-python`
-(`>=3.12.3`). L'installation et l'exécution dans un navigateur n'ont pas été
-vérifiées ici : cette interface ne constitue pas une garantie de compatibilité
-PyScript/Pyodide.
+Le wheel pktools est en Python pur. Le template du builder
+[`cartes_multicouches`](https://github.com/efbulle/cartes_multicouches) utilise
+PyScript `2026.7.3` et précharge `micropip` et `pandas`. Une vérification
+manuelle dans ce runtime a installé le wheel avec l'installation normale de
+`micropip` depuis `emfs://` (sans `deps=False`) : Python `3.14.2`, Pyodide
+`314.0.3`, pandas `3.0.2`. Elle a confirmé `4+514` → `4514`, le rejet d'une
+chaîne invalide et l'absence de Polars.
+
+Ce contrôle ciblait l'installation du wheel et l'interface pandas dans le
+runtime du navigateur, pas la génération ni l'exécution complète du HTML du
+builder. Le wheel de base ne demande aucun paquet ; l'installation de l'extra
+`pandas` via PyPI reste soumise à la disponibilité de wheels compatibles avec
+la version de Pyodide concernée.
 
 ### Manipulation de tronçons
 
@@ -238,8 +244,8 @@ exécutables de ces cas limites.
 
 ## Dépendances
 
-- **polars** (≥2.1.0) : dépendance par défaut et moteur des fonctions existantes.
-- **pandas** (≥2.2) : dépendance optionnelle de l'interface pandas.
+- **polars** (≥2.1.0) : extra `polars`, moteur des fonctions existantes.
+- **pandas** (≥2.2) : extra `pandas`, indépendant de l'extra Polars.
 
 ## Développement
 

@@ -5,8 +5,16 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 
-import polars as pl
-import polars.selectors as cs
+try:
+    import polars as pl
+    import polars.selectors as cs
+except ModuleNotFoundError as exc:
+    if exc.name not in {"polars", "polars.selectors"}:
+        raise
+    raise ImportError(
+        "Les outils de tronçons de pktools nécessitent Polars. "
+        "Installez-le avec `pip install 'pktools[polars]'`."
+    ) from exc
 
 
 def zones_homogenes(

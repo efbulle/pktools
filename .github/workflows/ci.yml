@@ -48,18 +48,20 @@ jobs:
       - name: Build package
         run: uv build
 
-  pandas-only:
-    name: Installation pandas sans Polars
+  optional-backends:
+    name: Installation isolée (${{ matrix.backend }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [pandas, polars]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.12"
       - run: uv build --wheel
-      - run: uv venv .pandas-only
-      - run: uv pip install --python .pandas-only/bin/python "pandas>=2.2"
-      - run: uv pip install --python .pandas-only/bin/python --no-deps dist/*.whl
-      - name: Vérifier l'import et la conversion sans Polars
-        run: |
-          .pandas-only/bin/python -c "import importlib.util, sys; assert importlib.util.find_spec('polars') is None; import pandas as pd; from pktools.pandas import ext_to_m; assert ext_to_m(pd.Series(['4+514'])).iloc[0] == 4514; assert 'polars' not in sys.modules"
+      - run: uv venv .backend-env
+      - run: uv pip install --python .backend-env/bin/python "$(echo dist/pktools-*.whl)[${{ matrix.backend }}]"
+      - run: uv pip check --python .backend-env/bin/python
+      - run: .backend-env/bin/python tests/optional_backend_smoke.py ${{ matrix.backend }}

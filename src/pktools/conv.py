@@ -1,6 +1,14 @@
 """Module de conversion entre représentations des pk."""
 
-import polars as pl
+try:
+    import polars as pl
+except ModuleNotFoundError as exc:
+    if exc.name != "polars":
+        raise
+    raise ImportError(
+        "Les conversions Polars de pktools nécessitent Polars. "
+        "Installez-le avec `pip install 'pktools[polars]'`."
+    ) from exc
 
 from ._rules import COMP_MAP, OP_MAP, REGEX_PK_EXT, RER_C
 
