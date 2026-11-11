@@ -47,3 +47,21 @@ jobs:
 
       - name: Build package
         run: uv build
+
+  optional-backends:
+    name: Installation isolée (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [pandas, polars]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv build --wheel
+      - run: uv venv .backend-env
+      - run: uv pip install --python .backend-env/bin/python "$(echo dist/pktools-*.whl)[${{ matrix.backend }}]"
+      - run: uv pip check --python .backend-env/bin/python
+      - run: .backend-env/bin/python tests/optional_backend_smoke.py ${{ matrix.backend }}
