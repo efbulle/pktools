@@ -7,7 +7,8 @@ except ModuleNotFoundError as exc:
         raise
     raise ImportError(
         "Les conversions Polars de pktools nécessitent Polars. "
-        "Installez-le avec `pip install 'pktools[polars]'`."
+        'Installez-le avec `pip install "pktools[polars] @ '
+        'git+https://github.com/efbulle/pktools.git@main"`.'
     ) from exc
 
 from ._rules import COMP_MAP, OP_MAP, REGEX_PK_EXT, RER_C
