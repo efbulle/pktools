@@ -14,28 +14,40 @@ Modules de manipulation de pk (points kilométriques) et de tronçons.
 
 - Python ≥ 3.12.3
 
-### Installer via pip
+### Installer depuis GitHub
+
+**Attention :** le nom `pktools` sur PyPI appartient à un autre projet.
+N'utilisez pas `pip install pktools` pour installer ce dépôt. Les commandes
+ci-dessous nécessitent Git et installent la branche `main` depuis GitHub.
+Pour figer une version publiée, remplacez `@main` par son tag Git.
+
+Polars et pandas sont des dépendances optionnelles et indépendantes :
 
 ```bash
-pip install "pktools[polars]"
+pip install "pktools[polars] @ git+https://github.com/efbulle/pktools.git@main"
+pip install "pktools[pandas] @ git+https://github.com/efbulle/pktools.git@main"
 ```
 
-Polars et pandas sont des dépendances optionnelles et indépendantes. Les
-conversions pandas seules s'installent avec :
+La première commande installe les fonctions Polars et la seconde les
+conversions pandas seules. Pour utiliser les deux :
 
 ```bash
-pip install "pktools[pandas]"
+pip install "pktools[polars,pandas] @ git+https://github.com/efbulle/pktools.git@main"
 ```
 
-Pour utiliser les deux backends : `pip install "pktools[polars,pandas]"`.
-`pip install pktools` installe le paquet sans aucun backend. Il reste
-importable, mais chaque backend doit être installé avant d'utiliser ses
-fonctions ; les fonctions Polars donnent un message d'erreur indiquant
-`pktools[polars]` si Polars manque.
+Sans extra, le paquet s'installe sans backend :
+
+```bash
+pip install "pktools @ git+https://github.com/efbulle/pktools.git@main"
+```
+
+Le paquet reste importable, mais chaque backend doit être installé avant
+d'utiliser ses fonctions.
 
 **Migration depuis les versions précédentes :** Polars était auparavant
 installé par défaut. Pour retrouver les dépendances et conversions habituelles,
-mettez à jour l'installation avec `pip install "pktools[polars]"`.
+mettez à jour l'installation avec la commande GitHub pour l'extra `polars`
+ci-dessus.
 
 ## Utilisation
 
@@ -149,9 +161,9 @@ chaîne invalide et l'absence de Polars.
 
 Ce contrôle ciblait l'installation du wheel et l'interface pandas dans le
 runtime du navigateur, pas la génération ni l'exécution complète du HTML du
-builder. Le wheel de base ne demande aucun paquet ; l'installation de l'extra
-`pandas` via PyPI reste soumise à la disponibilité de wheels compatibles avec
-la version de Pyodide concernée.
+builder. Le wheel de base ne demande aucun paquet ; l'installation de pandas reste
+soumise à la disponibilité de wheels compatibles avec la version de Pyodide
+concernée.
 
 ### Manipulation de tronçons
 

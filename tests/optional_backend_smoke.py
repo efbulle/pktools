@@ -26,6 +26,7 @@ def check_pandas() -> None:
         polars_function = pktools.ext_to_m
     except ImportError as exc:
         assert "pktools[polars]" in str(exc)
+        assert "git+https://github.com/efbulle/pktools.git@main" in str(exc)
     else:
         raise AssertionError(
             f"Missing Polars did not produce an installation hint: {polars_function}"

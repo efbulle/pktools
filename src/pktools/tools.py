@@ -13,7 +13,8 @@ except ModuleNotFoundError as exc:
         raise
     raise ImportError(
         "Les outils de tronçons de pktools nécessitent Polars. "
-        "Installez-le avec `pip install 'pktools[polars]'`."
+        'Installez-le avec `pip install "pktools[polars] @ '
+        'git+https://github.com/efbulle/pktools.git@main"`.'
     ) from exc
 
 
